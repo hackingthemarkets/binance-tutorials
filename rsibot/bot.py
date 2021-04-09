@@ -3,12 +3,12 @@ import config
 from binance.client import Client
 from binance.enums import *
 
-SOCKET = "wss://stream.binance.com:9443/ws/ethusdt@kline_1m"
+SOCKET = "wss://stream.binance.com:9443/ws/ethbrl@kline_1m"
 
-RSI_PERIOD = 14
-RSI_OVERBOUGHT = 70
-RSI_OVERSOLD = 30
-TRADE_SYMBOL = 'ETHUSD'
+RSI_PERIOD = 7
+RSI_OVERBOUGHT = 60
+RSI_OVERSOLD = 40
+TRADE_SYMBOL = 'ETHBRL'
 TRADE_QUANTITY = 0.05
 
 closes = []
@@ -16,10 +16,13 @@ in_position = False
 
 client = Client(config.API_KEY, config.API_SECRET, tld='us')
 
-def order(side, quantity, symbol,order_type=ORDER_TYPE_MARKET):
+def order(side, quantity, symbol, order_type=ORDER_TYPE_MARKET, last_rsi=0):
     try:
         print("sending order")
-        order = client.create_order(symbol=symbol, side=side, type=order_type, quantity=quantity)
+        # order = client.create_order(symbol=symbol, side=side, type=order_type, quantity=quantity)
+        f = open("negociacoes.txt", mode="a+", newline="\r\n")
+        f.write(str(order_type) + " " + str(quantity) + " " + str(symbol) + " " + str(side) + " " + str(last_rsi) )
+        f.close()
         print(order)
     except Exception as e:
         print("an exception occured - {}".format(e))
@@ -37,9 +40,9 @@ def on_close(ws):
 def on_message(ws, message):
     global closes, in_position
     
-    print('received message')
+    # print('received message')
     json_message = json.loads(message)
-    pprint.pprint(json_message)
+    # pprint.pprint(json_message)
 
     candle = json_message['k']
 
@@ -59,12 +62,12 @@ def on_message(ws, message):
             print(rsi)
             last_rsi = rsi[-1]
             print("the current rsi is {}".format(last_rsi))
-
+            
             if last_rsi > RSI_OVERBOUGHT:
                 if in_position:
                     print("Overbought! Sell! Sell! Sell!")
                     # put binance sell logic here
-                    order_succeeded = order(SIDE_SELL, TRADE_QUANTITY, TRADE_SYMBOL)
+                    order_succeeded = order("SELL", TRADE_QUANTITY, TRADE_SYMBOL, last_rsi)
                     if order_succeeded:
                         in_position = False
                 else:
@@ -76,7 +79,7 @@ def on_message(ws, message):
                 else:
                     print("Oversold! Buy! Buy! Buy!")
                     # put binance buy order logic here
-                    order_succeeded = order(SIDE_BUY, TRADE_QUANTITY, TRADE_SYMBOL)
+                    order_succeeded = order("BUY", TRADE_QUANTITY, TRADE_SYMBOL, last_rsi)
                     if order_succeeded:
                         in_position = True
 
