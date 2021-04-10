@@ -6,8 +6,8 @@ from binance.enums import *
 SOCKET = "wss://stream.binance.com:9443/ws/ethbrl@kline_1m"
 
 RSI_PERIOD = 14
-RSI_OVERBOUGHT = 70
-RSI_OVERSOLD = 30
+RSI_OVERBOUGHT = 60
+RSI_OVERSOLD = 50
 TRADE_SYMBOL = 'ETHBRL'
 TRADE_QUANTITY = 0.05
 MINIMUM_GAIN = 0.30
@@ -17,13 +17,17 @@ in_position = False
 
 client = Client(config.API_KEY, config.API_SECRET, tld='us')
 
+def save_transaction_history(side, quantity, last_price, gain):
+  f = open("negociacoes.txt", mode="a+", newline="\n")
+  f.write("Operation: " + str(side) + " Quantity: " + str(quantity) + " Value: " + str(last_price)+ " Gain: " + str(gain) + "\n" )
+  f.close()
+
+
 def order(side, quantity, symbol, last_price, gain=0 , order_type=ORDER_TYPE_MARKET):
     try:
         # print("sending order")
         # order = client.create_order(symbol=symbol, side=side, type=order_type, quantity=quantity)
-        f = open("negociacoes.txt", mode="a+", newline="\n")
-        f.write("Operação: " + str(side) + " Quantidade: " + str(quantity) + " Valor: " + str(last_price)+ " Ganho: " + str(gain) + "\n" )
-        f.close()
+        save_transaction_history(side, quantity, last_price, gain)
         # print(order)
     except Exception as e:
         print("an exception occured - {}".format(e))

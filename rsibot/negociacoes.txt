@@ -1,3 +1,1 @@
-Operação: BUY Quantidade: 0.05 Valor: 12236.05000000 Ganho: 0
-Operação: SELL Quantidade: 0.05 Valor: 12279.22000000 Ganho: 0.3528099345785615
-Operação: BUY Quantidade: 0.05 Valor: 12195.70000000 Ganho: 0
+
