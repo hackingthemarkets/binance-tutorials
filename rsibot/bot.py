@@ -5,9 +5,12 @@ from binance.enums import *
 
 SOCKET = "wss://stream.binance.com:9443/ws/ethbrl@kline_1m"
 
-RSI_PERIOD = 2
+RSI_PERIOD = 14
 RSI_OVERBOUGHT = 50
 RSI_OVERSOLD = 40
+MACD_FAST = 12
+MACD_SLOW = 26
+MACD_SIGNALPEDIOD = 9
 TRADE_SYMBOL = 'ETHBRL'
 TRADE_QUANTITY = 0.05
 MINIMUM_GAIN = 0.10
@@ -33,7 +36,7 @@ def order(side, quantity, symbol, last_price, gain=0 , order_type=ORDER_TYPE_MAR
 
     return True
 
-def gain(sold, bought):
+def calc_gain(sold, bought):
   print(sold, bought)
   diff = sold - bought
   return float("{:.2f}".format((diff / bought) * 100))
@@ -49,7 +52,6 @@ def on_close(ws):
 
 def on_message(ws, message):
     global closes, in_position
-    bought = 0
     json_message = json.loads(message)
 
     candle = json_message['k']
@@ -66,16 +68,23 @@ def on_message(ws, message):
         if len(closes) > RSI_PERIOD:
             np_closes = numpy.array(closes)
             rsi = talib.RSI(np_closes, RSI_PERIOD)
-            print("all rsis calculated so far")
-            print(rsi)
+            if len(closes) > MACD_SLOW:
+              macd, macdsignal, macdhist = talib.MACD(np_closes, MACD_FAST, MACD_SLOW, MACD_SIGNALPEDIOD)
+            else:
+              macd, macdsignal, macdhist = 0
             last_rsi = rsi[-1]
-            print("the current rsi is {}".format(last_rsi))
+            last_macd = macd[-1]
+            print("the current RSI is {} and MACD is {}".format(last_rsi, last_macd))
             
-            if last_rsi >= RSI_OVERBOUGHT:
-                print("Quase vendendo")
+            if last_rsi >= RSI_OVERBOUGHT and (-1 <= last_macd <= 1):
                 if in_position:
                     print("Quase vendendo 2")
-                    gain = gain(close, bought)
+                    try:
+                      gain = calc_gain(close, bought)
+                    except Exception as e:
+                      print("an exception occured - {}".format(e))
+                      gain = 0
+
                     print("Gain: ", gain)
                     if gain >= MINIMUM_GAIN:
                       print("Overbought! Sell! Sell! Sell!")
@@ -88,7 +97,7 @@ def on_message(ws, message):
                 else:
                     print("It is overbought, but we don't own any. Nothing to do.")
             
-            if last_rsi <= RSI_OVERSOLD:
+            if last_rsi <= RSI_OVERSOLD and (-1 <= last_macd <= 1):
                 if in_position:
                     print("It is oversold, but you already own it, nothing to do.")
                 else:
