@@ -6,13 +6,17 @@ from binance.enums import *
 SOCKET = "wss://stream.binance.com:9443/ws/ethbrl@kline_1m"
 
 RSI_PERIOD = 14
-RSI_OVERBOUGHT = 50
+RSI_OVERBOUGHT = 60
 RSI_OVERSOLD = 40
+
 MACD_FAST = 12
 MACD_SLOW = 26
 MACD_SIGNALPEDIOD = 9
+MACD_START = MACD_SLOW + MACD_SIGNALPEDIOD
+
 TRADE_SYMBOL = 'ETHBRL'
 TRADE_QUANTITY = 0.05
+
 MINIMUM_GAIN = 0.10
 
 closes = []
@@ -67,10 +71,10 @@ def on_message(ws, message):
         if len(closes) > RSI_PERIOD:
             np_closes = numpy.array(closes)
             rsi = talib.RSI(np_closes, RSI_PERIOD)
-            if len(closes) > MACD_SLOW:
+            if len(closes) > MACD_START:
               macd, macdsignal, macdhist = talib.MACD(np_closes, MACD_FAST, MACD_SLOW, MACD_SIGNALPEDIOD)
             else:
-              macd, macdsignal, macdhist = 0
+              macd, macdsignal, macdhist = 100
             last_rsi = rsi[-1]
             last_macd = macd[-1]
             print("the current RSI is {} and MACD is {}".format(last_rsi, last_macd))
