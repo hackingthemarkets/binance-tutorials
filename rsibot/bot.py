@@ -1,7 +1,8 @@
-import websocket, json, pprint, talib, numpy
-import config
+from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
+import config, requests, websocket, json, pprint, talib, numpy
 from binance.client import Client
 from binance.enums import *
+
 
 SOCKET = "wss://stream.binance.com:9443/ws/ethbrl@kline_1m"
 
@@ -25,11 +26,24 @@ bought = 0
 
 # client = Client(config.API_KEY, config.API_SECRET, tld='us')
 
+def telegram_send(bot_message):
+    
+    bot_token = config.TELEGRAM_TOKEN
+    bot_chatID = config.TELEGRAM_ID
+    send_text = 'https://api.telegram.org/bot' + bot_token + '/sendMessage?chat_id=' + bot_chatID + '&parse_mode=Markdown&text=' + bot_message
+    response = requests.get(send_text)
+
+    return response.json()
+
 def save_transaction_history(side, quantity, last_price, gain):
+  message = "Operation: {} Quantity: {} Value: {} Gain: {}%\n".format(side, quantity, last_price, gain)
+
   f = open("negociations.txt", mode="a+", newline="\n")
-  f.write("Operation: {} Quantity: {} Value: {} Gain: {}%\n".format(side, quantity, last_price, gain))
+  f.write(message)
   f.close()
 
+  if side == "SELL":
+    telegram_send(message)
 
 def order(side, quantity, symbol, last_price, gain=0 , order_type=ORDER_TYPE_MARKET):
     try:
@@ -42,17 +56,19 @@ def order(side, quantity, symbol, last_price, gain=0 , order_type=ORDER_TYPE_MAR
     return True
 
 def calc_gain(sold, bought):
-  print(sold, bought)
   diff = sold - bought
   return float("{:.2f}".format((diff / bought) * 100))
 
 
 def on_open(ws):
-    print('opened connection')
+    message = "opened connection"
+    print(message)
+    telegram_send(message)
 
 def on_close(ws):
     print('closed connection')
     print('opening connection again')
+    telegram_send('opening connection again')
     open_socket()
 
 def on_message(ws, message):

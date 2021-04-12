@@ -2,3 +2,5 @@ python-binance
 TA-Lib
 numpy
 websocket_client
+python-telegram-bot
+python-dotenv
