@@ -17,6 +17,7 @@ MINIMUM_GAIN = 0.10
 
 closes = []
 in_position = False
+bought = 0
 
 # client = Client(config.API_KEY, config.API_SECRET, tld='us')
 
@@ -51,7 +52,7 @@ def on_close(ws):
     open_socket()
 
 def on_message(ws, message):
-    global closes, in_position
+    global closes, in_position, bought
     json_message = json.loads(message)
 
     candle = json_message['k']
@@ -62,8 +63,6 @@ def on_message(ws, message):
     if is_candle_closed:
         print("candle closed at {}".format(close))
         closes.append(close)
-        print("closes")
-        print(closes)
 
         if len(closes) > RSI_PERIOD:
             np_closes = numpy.array(closes)
@@ -78,7 +77,6 @@ def on_message(ws, message):
             
             if last_rsi >= RSI_OVERBOUGHT and (-1 <= last_macd <= 1):
                 if in_position:
-                    print("Quase vendendo 2")
                     try:
                       gain = calc_gain(close, bought)
                     except Exception as e:

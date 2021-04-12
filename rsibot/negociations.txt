@@ -1,2 +1,0 @@
-Operation: BUY Quantity: 0.05 Value: 12284.9 Gain: 0%
-Operation: BUY Quantity: 0.05 Value: 12238.12 Gain: 0%
