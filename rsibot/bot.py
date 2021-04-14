@@ -7,8 +7,8 @@ from binance.enums import *
 SOCKET = "wss://stream.binance.com:9443/ws/ethbrl@kline_1m"
 
 RSI_PERIOD = 14
-RSI_OVERBOUGHT = 60
-RSI_OVERSOLD = 40
+RSI_OVERBOUGHT = 65
+RSI_OVERSOLD = 35
 
 MACD_FAST = 12
 MACD_SLOW = 26
@@ -42,8 +42,7 @@ def save_transaction_history(side, quantity, last_price, gain):
   f.write(message)
   f.close()
 
-  if side == "SELL":
-    telegram_send(message)
+  telegram_send(message)
 
 def order(side, quantity, symbol, last_price, gain=0 , order_type=ORDER_TYPE_MARKET):
     try:
@@ -90,20 +89,16 @@ def on_message(ws, message):
             if len(closes) > MACD_START:
               macd, macdsignal, macdhist = talib.MACD(np_closes, MACD_FAST, MACD_SLOW, MACD_SIGNALPEDIOD)
             else:
-              macd, macdsignal, macdhist = 100
+              macd, macdsignal, macdhist = (10, 0, 10)
             last_rsi = rsi[-1]
             last_macd = macd[-1]
-            print("the current RSI is {} and MACD is {}".format(last_rsi, last_macd))
+            last_macdsignal = macdsignal[-1]
+            macd_signal = abs(last_macd - last_macdsignal)
+            print("the current RSI is {} and MACD is {} ".format(last_rsi, macd_signal))
             
-            if last_rsi >= RSI_OVERBOUGHT and (-1 <= last_macd <= 1):
+            if last_rsi >= RSI_OVERBOUGHT and (-1.5 <= macd_signal <= 1.5):
                 if in_position:
-                    try:
-                      gain = calc_gain(close, bought)
-                    except Exception as e:
-                      print("an exception occured - {}".format(e))
-                      gain = 0
-
-                    print("Gain: ", gain)
+                    gain = calc_gain(close, bought)
                     if gain >= MINIMUM_GAIN:
                       print("Overbought! Sell! Sell! Sell!")
                       order_succeeded = order("SELL", TRADE_QUANTITY, TRADE_SYMBOL, close, gain)
@@ -115,7 +110,7 @@ def on_message(ws, message):
                 else:
                     print("It is overbought, but we don't own any. Nothing to do.")
             
-            if last_rsi <= RSI_OVERSOLD and (-1 <= last_macd <= 1):
+            if last_rsi <= RSI_OVERSOLD and (-1.5 <= macd_signal <= 1.5):
                 if in_position:
                     print("It is oversold, but you already own it, nothing to do.")
                 else:
