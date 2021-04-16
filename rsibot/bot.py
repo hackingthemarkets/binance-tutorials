@@ -1,30 +1,39 @@
-from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
-import config, requests, websocket, json, pprint, talib, numpy
+import config, requests, websocket, json, talib, numpy, sys, time, datetime
 from binance.client import Client
+from pymongo import MongoClient
 from binance.enums import *
 
 
-SOCKET = "wss://stream.binance.com:9443/ws/ethbrl@kline_1m"
+SOCKET = config.SOCKET
 
-RSI_PERIOD = 14
-RSI_OVERBOUGHT = 65
-RSI_OVERSOLD = 35
+RSI_PERIOD = config.RSI_PERIOD
+RSI_OVERBOUGHT = config.RSI_OVERBOUGHT
+RSI_OVERSOLD = config.RSI_OVERSOLD
 
-MACD_FAST = 12
-MACD_SLOW = 26
-MACD_SIGNALPEDIOD = 9
+MACD_FAST = config.MACD_FAST
+MACD_SLOW = config.MACD_SLOW
+MACD_SIGNALPEDIOD = config.MACD_SIGNALPEDIOD
 MACD_START = MACD_SLOW + MACD_SIGNALPEDIOD
 
-TRADE_SYMBOL = 'ETHBRL'
-TRADE_QUANTITY = 0.05
+TRADE_SYMBOL = config.TRADE_SYMBOL
+TRADE_QUANTITY = config.TRADE_QUANTITY
 
-MINIMUM_GAIN = 0.10
+MINIMUM_GAIN = config.MINIMUM_GAIN
 
 closes = []
 in_position = False
 bought = 0
 
 # client = Client(config.API_KEY, config.API_SECRET, tld='us')
+
+def connect_db():
+  client = MongoClient('mongodb://localhost:27017/')
+  db = client['trader_bot']
+  return db
+
+def insert_transaction(db, transaction):
+  collection = db[TRADE_SYMBOL]
+  collection.insert_one(transaction)
 
 def telegram_send(bot_message):
     
@@ -36,7 +45,17 @@ def telegram_send(bot_message):
     return response.json()
 
 def save_transaction_history(side, quantity, last_price, gain):
+  db = connect_db()
   message = "Operation: {} Quantity: {} Value: {} Gain: {}%\n".format(side, quantity, last_price, gain)
+  
+  transaction = {
+    "side" : side,
+    "quantity" : quantity,
+    "price" : last_price,
+    "gain" : gain,
+    "date" : datetime.datetime.now()
+  }
+  insert_transaction(db, transaction)
 
   f = open("negociations.txt", mode="a+", newline="\n")
   f.write(message)
@@ -58,6 +77,11 @@ def calc_gain(sold, bought):
   diff = sold - bought
   return float("{:.2f}".format((diff / bought) * 100))
 
+def clear_array(d_array):
+  if len(d_array) > 1000:
+    data = d_array[-100:]
+    return data
+  return d_array
 
 def on_open(ws):
     message = "opened connection"
@@ -84,19 +108,24 @@ def on_message(ws, message):
         closes.append(close)
 
         if len(closes) > RSI_PERIOD:
+          
             np_closes = numpy.array(closes)
             rsi = talib.RSI(np_closes, RSI_PERIOD)
+            rsi = clear_array(rsi)
+
             if len(closes) > MACD_START:
               macd, macdsignal, macdhist = talib.MACD(np_closes, MACD_FAST, MACD_SLOW, MACD_SIGNALPEDIOD)
+              macd = clear_array(macd)
+              macdsignal = clear_array(macdsignal)
+              macdhist = clear_array(macdhist)
             else:
               macd, macdsignal, macdhist = (10, 0, 10)
+
             last_rsi = rsi[-1]
-            last_macd = macd[-1]
-            last_macdsignal = macdsignal[-1]
-            macd_signal = abs(last_macd - last_macdsignal)
-            print("the current RSI is {} and MACD is {} ".format(last_rsi, macd_signal))
+            last_macdhist = macdhist[-1]
+            print("the current RSI is {}, MACD is {}".format(last_rsi, last_macdhist))
             
-            if last_rsi >= RSI_OVERBOUGHT and (-1.5 <= macd_signal <= 1.5):
+            if last_rsi >= RSI_OVERBOUGHT and (-1.5 <= last_macdhist <= 1.5):
                 if in_position:
                     gain = calc_gain(close, bought)
                     if gain >= MINIMUM_GAIN:
@@ -110,7 +139,7 @@ def on_message(ws, message):
                 else:
                     print("It is overbought, but we don't own any. Nothing to do.")
             
-            if last_rsi <= RSI_OVERSOLD and (-1.5 <= macd_signal <= 1.5):
+            if last_rsi <= RSI_OVERSOLD and (-1.5 <= last_macdhist <= 1.5):
                 if in_position:
                     print("It is oversold, but you already own it, nothing to do.")
                 else:
@@ -125,4 +154,7 @@ def open_socket():
   ws = websocket.WebSocketApp(SOCKET, on_open=on_open, on_close=on_close, on_message=on_message)
   ws.run_forever()
 
-open_socket()
+while True:
+  open_socket()
+  time.sleep(60)
+        
