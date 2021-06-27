@@ -1,1 +1,4 @@
 Operation: BUY Quantity: 0.05 Value: 14108.15 Gain: 0%
+Operation: BUY Quantity: 0.05 Value: 14006.09 Gain: 0%
+Operation: BUY Quantity: 0.05 Value: 12175.77 Gain: 0%
+Operation: SELL Quantity: 0.05 Value: 12340.24 Gain: 1.35%
