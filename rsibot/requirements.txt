@@ -1,6 +1,6 @@
-python-binance
-TA-Lib
-numpy
-websocket_client
-python-dotenv
-pymongo
+python-binance==1.0.12
+TA-Lib==0.4.20
+numpy==1.21.0
+websocket-client==1.1.0
+python-dotenv==0.18.0
+pymongo==3.11.4
