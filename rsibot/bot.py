@@ -176,7 +176,7 @@ def on_message(ws, message):
                     if gain >= MINIMUM_GAIN:
                         print("Overbought! Sell! Sell! Sell!")
                         order_succeeded = order(
-                            "SELL", TRADE_QUANTITY, TRADE_SYMBOL, close, gain)
+                            "SELL", (TRADE_QUANTITY-0.1), TRADE_SYMBOL, close, gain)
                         if order_succeeded:
                             bought = 0
                             in_position = False
