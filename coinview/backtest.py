@@ -19,7 +19,7 @@ cerebro = bt.Cerebro()
 fromdate = datetime.datetime.strptime('2020-07-01', '%Y-%m-%d')
 todate = datetime.datetime.strptime('2020-07-12', '%Y-%m-%d')
 
-data = bt.feeds.GenericCSVData(dataname='data/2020_15minutes.csv', dtformat=2, compression=15, timeframe=bt.TimeFrame.Minutes, fromdate=fromdate, todate=todate)
+data = bt.feeds.GenericCSVData(dataname='data/2020_15minutes.csv', dtformat=2, compression=15, timeframe=bt.TimeFrame.Minutes, fromdate=fromdate, todate=todate, headers=False)
 
 cerebro.adddata(data)
 
